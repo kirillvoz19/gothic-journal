@@ -1,19 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
-import {
-  Box,
-  CircularProgress,
-  Container,
-  Paper,
-  TextField,
-  Button,
-  Typography,
-  Alert,
-  Tooltip,
-  Snackbar,
-} from '@mui/material'
-import { ThemeProvider, createTheme } from '@mui/material/styles'
+import { ThemeProvider } from '@mui/material/styles'
 import CssBaseline from '@mui/material/CssBaseline'
-import { BelarusianText } from './components/BelarusianText'
+import { appTheme } from './app/theme'
 import { getJwtExpiryMs, getJwtPayload } from './shared/lib/auth/jwt'
 import {
   clearTokensFromStorage,
@@ -24,66 +12,7 @@ import {
 } from './shared/lib/auth/tokens'
 import { getApiUrl, getSupabaseRequestHeaders, isSupabaseBackend } from './shared/lib/api/baseUrl'
 import { AppRouter } from './app/providers/router/AppRouter'
-
-const theme = createTheme({
-  palette: {
-    mode: 'light',
-    primary: {
-      main: '#2e7d32',
-      light: '#4caf50',
-      dark: '#1b5e20',
-    },
-    background: {
-      default: '#e8f5e9',
-      paper: '#ffffff',
-    },
-  },
-  typography: {
-    fontFamily: '"Roboto", "Helvetica", "Arial", sans-serif',
-    h1: { fontFamily: '"Oswald", sans-serif' },
-    h2: { fontFamily: '"Oswald", sans-serif' },
-    h3: { fontFamily: '"Oswald", sans-serif' },
-    h4: { fontFamily: '"Oswald", sans-serif' },
-    h5: { fontFamily: '"Oswald", sans-serif' },
-    h6: { fontFamily: '"Oswald", sans-serif' },
-  },
-  shape: {
-    borderRadius: 1, // 1 * spacing(8) = 8px (число в theme.shape умножается на spacing)
-  },
-  components: {
-    MuiButton: {
-      styleOverrides: {
-        root: {
-          borderRadius: '8px',
-        },
-      },
-    },
-    MuiOutlinedInput: {
-      styleOverrides: {
-        root: {
-          borderRadius: '8px',
-        },
-        notchedOutline: {
-          borderRadius: '8px',
-        },
-      },
-    },
-    MuiFilledInput: {
-      styleOverrides: {
-        root: {
-          borderRadius: '8px',
-        },
-      },
-    },
-    MuiDialog: {
-      styleOverrides: {
-        paper: {
-          borderRadius: '8px',
-        },
-      },
-    },
-  },
-})
+import type { LoginPageProps } from './pages/login/ui/LoginPage'
 
 function App() {
   const [isAuthChecking, setIsAuthChecking] = useState(true)
@@ -349,141 +278,25 @@ function App() {
     return response
   }
 
-  // Пока проверяем авторизацию (чтение токенов из storage) — показываем лоудер как на странице группы
-  if (isAuthChecking) {
-    return (
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Box
-          sx={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(255, 255, 255, 0.7)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1300,
-          }}
-          aria-busy="true"
-          aria-live="polite"
-          role="status"
-        >
-          <CircularProgress size={48} aria-label="Загрузка" />
-        </Box>
-      </ThemeProvider>
-    )
+  const loginPageProps: LoginPageProps = {
+    username,
+    password,
+    loginError,
+    loginLoading,
+    snackbar,
+    onUsernameChange: setUsername,
+    onPasswordChange: setPassword,
+    onSubmit: handleLogin,
+    onCloseSnackbar: handleCloseSnackbar,
   }
 
-  // Форма логина
-  if (!isAuthenticated) {
-    return (
-      <ThemeProvider theme={theme}>
-        <CssBaseline />
-        <Box
-          sx={{
-            minHeight: '100vh',
-            backgroundColor: '#ffffff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-          }}
-        >
-          <Container sx={{ width: '400px' }}>
-            <Paper
-              elevation={0}
-              sx={{
-                p: 4,
-                display: 'flex',
-                flexDirection: 'column',
-                gap: 2,
-                backgroundColor: '#e8f5e9',
-                borderRadius: '16px',
-                boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-              }}
-            >
-              <Typography variant="h4" component="h1" align="center" gutterBottom>
-                <BelarusianText belarusian="Уваход123" russian="Вход" />
-              </Typography>
-
-              {loginError && (
-                <Alert severity="error">
-                  <BelarusianText
-                    belarusian="Памылка ўваходу"
-                    russian="Ошибка входа"
-                  />
-                  : {loginError}
-                </Alert>
-              )}
-
-              <Box component="form" onSubmit={handleLogin} sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <Tooltip title="Логин" arrow>
-                  <TextField
-                    label="Лагін"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
-                    required
-                    fullWidth
-                  />
-                </Tooltip>
-                <Tooltip title="Пароль" arrow>
-                  <TextField
-                    label="Пароль"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    fullWidth
-                  />
-                </Tooltip>
-                <Button
-                  type="submit"
-                  variant="contained"
-                  disabled={loginLoading}
-                  fullWidth
-                  sx={{ mt: 2 }}
-                >
-                  {loginLoading ? (
-                    <BelarusianText
-                      belarusian="Уваход..."
-                      russian="Вход..."
-                    />
-                  ) : (
-                    <BelarusianText belarusian="Увайсці" russian="Войти" />
-                  )}
-                </Button>
-              </Box>
-            </Paper>
-          </Container>
-        </Box>
-
-        {/* Тостер для ошибок входа */}
-        <Snackbar
-          open={snackbar.open}
-          autoHideDuration={4000}
-          onClose={handleCloseSnackbar}
-          anchorOrigin={{ vertical: 'top', horizontal: 'right' }}
-        >
-          <Alert
-            onClose={handleCloseSnackbar}
-            severity={snackbar.severity}
-            variant="filled"
-            sx={{ width: '100%' }}
-          >
-            {snackbar.message}
-          </Alert>
-        </Snackbar>
-      </ThemeProvider>
-    )
-  }
-
-  // Основное приложение
   return (
-    <ThemeProvider theme={theme}>
+    <ThemeProvider theme={appTheme}>
       <CssBaseline />
       <AppRouter
+        isAuthChecking={isAuthChecking}
+        isAuthenticated={isAuthenticated}
+        loginPageProps={loginPageProps}
         authenticatedFetch={authenticatedFetch}
         onLogout={handleLogout}
         isAdmin={isAdmin}

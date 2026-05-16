@@ -25,6 +25,9 @@ export function getApiUrl(path: string): string {
     return `${base}/teacher-password?id=${id}`
   }
   if (p.startsWith('api/teachers')) return `${base}/teachers${path.includes('?') ? path.slice(path.indexOf('?')) : ''}`
+  if (p.startsWith('api/public-group')) {
+    return `${base}/public-group${path.includes('?') ? path.slice(path.indexOf('?')) : ''}`
+  }
   if (p.startsWith('api/groups')) return `${base}/groups${path.includes('?') ? path.slice(path.indexOf('?')) : ''}`
   if (p.startsWith('api/attendance')) return `${base}/attendance${path.includes('?') ? path.slice(path.indexOf('?')) : ''}`
   if (p.startsWith('api/backup')) return `${base}/backup`

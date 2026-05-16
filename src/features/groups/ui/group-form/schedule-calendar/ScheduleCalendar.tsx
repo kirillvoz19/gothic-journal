@@ -16,6 +16,11 @@ import {
 } from '@mui/material'
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore'
 import dayjs from 'dayjs'
+import {
+  accentSurfaceBg,
+  accordionSummaryAccentSx,
+  paperCardSx,
+} from '../../../../../app/theme'
 import { BelarusianText } from '../../../../../components/BelarusianText'
 import { getMonthLabel } from '../../../lib/journal-calendar/monthLabels'
 import {
@@ -30,6 +35,7 @@ import { getLessonMinutes, getScheduleForDate, groupSchedulesByYearMonth } from 
 export type ScheduleCalendarProps = {
   schedules: GroupSchedule[]
   disabled?: boolean
+  readOnly?: boolean
   onAddLesson: (params?: { isoDate?: string }) => void
   onEditLesson: (params: { schedule: GroupSchedule }) => void
   onDeleteLesson: (params: { schedule: GroupSchedule }) => void
@@ -40,6 +46,7 @@ const renderDayCell = (params: {
   cell: MonthGridCell
   monthSchedules: GroupSchedule[]
   disabled: boolean
+  readOnly: boolean
   onAddLesson: (isoDate: string) => void
   onEditLesson: (schedule: GroupSchedule) => void
   onDeleteLesson: (schedule: GroupSchedule) => void
@@ -48,6 +55,7 @@ const renderDayCell = (params: {
     cell,
     monthSchedules,
     disabled,
+    readOnly,
     onAddLesson,
     onEditLesson,
     onDeleteLesson,
@@ -77,45 +85,47 @@ const renderDayCell = (params: {
         borderRadius: '8px',
         p: 0.5,
         position: 'relative',
-        backgroundColor: schedule ? 'background.paper' : 'grey.50',
+        backgroundColor: schedule ? 'background.paper' : 'action.hover',
       }}
     >
-      <Box sx={{ position: 'absolute', top: 7, left: 2, display: 'flex', gap: 0 }}>
-        {schedule ? (
-          <>
+      {!readOnly && (
+        <Box sx={{ position: 'absolute', top: 7, left: 2, display: 'flex', gap: 0 }}>
+          {schedule ? (
+            <>
+              <IconButton
+                aria-label="Рэдагаваць урок"
+                size="small"
+                onClick={() => onEditLesson(schedule)}
+                disabled={disabled}
+                sx={{ padding: 0 }}
+              >
+                <EditIcon sx={{ fontSize: 16 }} />
+              </IconButton>
+              <IconButton
+                aria-label="Выдаліць урок"
+                size="small"
+                onClick={() => onDeleteLesson(schedule)}
+                disabled={disabled}
+                color="error"
+                sx={{ padding: 0 }}
+              >
+                <DeleteIcon sx={{ fontSize: 16 }} />
+              </IconButton>
+            </>
+          ) : (
             <IconButton
-              aria-label="Рэдагаваць урок"
+              aria-label="Дадаць урок"
               size="small"
-              onClick={() => onEditLesson(schedule)}
+              onClick={() => onAddLesson(isoDate)}
               disabled={disabled}
-              sx={{ padding: 0 }}
+              color="primary"
+              sx={{ width: 22, height: 22 }}
             >
-              <EditIcon sx={{ fontSize: 16 }} />
+              <AddIcon sx={{ fontSize: 16 }} />
             </IconButton>
-            <IconButton
-              aria-label="Выдаліць урок"
-              size="small"
-              onClick={() => onDeleteLesson(schedule)}
-              disabled={disabled}
-              color="error"
-              sx={{ padding: 0 }}
-            >
-              <DeleteIcon sx={{ fontSize: 16 }} />
-            </IconButton>
-          </>
-        ) : (
-          <IconButton
-            aria-label="Дадаць урок"
-            size="small"
-            onClick={() => onAddLesson(isoDate)}
-            disabled={disabled}
-            color="primary"
-            sx={{ width: 22, height: 22 }}
-          >
-            <AddIcon sx={{ fontSize: 16 }} />
-          </IconButton>
-        )}
-      </Box>
+          )}
+        </Box>
+      )}
 
       {typeof minutes === 'number' && (
         <Box
@@ -198,44 +208,36 @@ export const ScheduleCalendar = (props: ScheduleCalendarProps) => {
   const {
     schedules,
     disabled = false,
+    readOnly = false,
     onAddLesson,
     onEditLesson,
     onDeleteLesson,
     onDeleteMonth,
   } = props
 
-  const LIGHT_GREEN_BG = '#e8f5e9'
-
   const grouped = groupSchedulesByYearMonth(schedules)
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       {/* Заголовок «График» отдельным блоком */}
-      <Paper
-        elevation={0}
-        sx={{
-          backgroundColor: '#ffffff',
-          borderRadius: '8px',
-          boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-          px: 2,
-          py: 1.5,
-        }}
-      >
+      <Paper elevation={0} sx={{ ...paperCardSx, px: 2, py: 1.5 }}>
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
           <Typography variant="subtitle1" sx={{ fontFamily: '"Oswald", sans-serif', fontSize: '1.25rem' }}>
             <BelarusianText belarusian="Графік" russian="График" />
           </Typography>
-          <Tooltip title="Дадаць дату/урок">
-            <IconButton
-              aria-label="Дадаць дату/урок"
-              size="small"
-              color="primary"
-              onClick={() => onAddLesson(undefined)}
-              disabled={disabled}
-            >
-              <AddIcon />
-            </IconButton>
-          </Tooltip>
+          {!readOnly && (
+            <Tooltip title="Дадаць дату/урок">
+              <IconButton
+                aria-label="Дадаць дату/урок"
+                size="small"
+                color="primary"
+                onClick={() => onAddLesson(undefined)}
+                disabled={disabled}
+              >
+                <AddIcon />
+              </IconButton>
+            </Tooltip>
+          )}
         </Box>
       </Paper>
 
@@ -247,16 +249,7 @@ export const ScheduleCalendar = (props: ScheduleCalendarProps) => {
         /* Контейнер годов: отдельный белый контейнер на каждый год */
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           {Array.from(grouped.entries()).map(([year, yearMap]) => (
-            <Paper
-              key={year}
-              elevation={0}
-              sx={{
-                backgroundColor: '#ffffff',
-                borderRadius: '8px',
-                boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-                overflow: 'hidden',
-              }}
-            >
+            <Paper key={year} elevation={0} sx={{ ...paperCardSx, overflow: 'hidden' }}>
               <Accordion
                 defaultExpanded
                 disableGutters
@@ -270,14 +263,7 @@ export const ScheduleCalendar = (props: ScheduleCalendarProps) => {
               >
                 <AccordionSummary
                   expandIcon={<ExpandMoreIcon />}
-                  sx={{
-                    px: 1.5,
-                    borderLeft: '4px solid',
-                    borderLeftColor: 'primary.main',
-                    backgroundColor: 'rgba(46, 125, 50, 0.06)',
-                    '&:hover': { backgroundColor: 'rgba(46, 125, 50, 0.1)' },
-                    '& .MuiAccordionSummary-content': { alignItems: 'center', py: 0.5 },
-                  }}
+                  sx={{ px: 1.5, ...accordionSummaryAccentSx }}
                 >
                   <Typography variant="subtitle1" fontWeight={600} sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                     {year}
@@ -314,7 +300,7 @@ export const ScheduleCalendar = (props: ScheduleCalendarProps) => {
                         sx={{
                           minWidth: 0,
                           borderRadius: '8px',
-                          backgroundColor: LIGHT_GREEN_BG,
+                          backgroundColor: accentSurfaceBg,
                           overflow: 'hidden',
                         }}
                       >
@@ -326,7 +312,7 @@ export const ScheduleCalendar = (props: ScheduleCalendarProps) => {
                             gap: 1,
                             px: 1,
                             py: 1,
-                            backgroundColor: LIGHT_GREEN_BG,
+                            backgroundColor: accentSurfaceBg,
                           }}
                         >
                           <Tooltip title={label.russian} arrow placement="top">
@@ -334,20 +320,22 @@ export const ScheduleCalendar = (props: ScheduleCalendarProps) => {
                               {label.belarusian}
                             </Typography>
                           </Tooltip>
-                          <Tooltip title={`Выдаліць месяц (${monthStart})`}>
-                            <IconButton
-                              aria-label={`Выдаліць месяц ${label.russian}`}
-                              size="small"
-                              color="error"
-                              onClick={() => onDeleteMonth({ year, monthIndex0 })}
-                              disabled={disabled}
-                            >
-                              <DeleteIcon fontSize="small" />
-                            </IconButton>
-                          </Tooltip>
+                          {!readOnly && (
+                            <Tooltip title={`Выдаліць месяц (${monthStart})`}>
+                              <IconButton
+                                aria-label={`Выдаліць месяц ${label.russian}`}
+                                size="small"
+                                color="error"
+                                onClick={() => onDeleteMonth({ year, monthIndex0 })}
+                                disabled={disabled}
+                              >
+                                <DeleteIcon fontSize="small" />
+                              </IconButton>
+                            </Tooltip>
+                          )}
                         </Box>
 
-                        <Box sx={{ px: 1, py: 1, backgroundColor: LIGHT_GREEN_BG }}>
+                        <Box sx={{ px: 1, py: 1, backgroundColor: accentSurfaceBg }}>
                           <Box
                             sx={{
                               display: 'grid',
@@ -380,6 +368,7 @@ export const ScheduleCalendar = (props: ScheduleCalendarProps) => {
                                   cell,
                                   monthSchedules,
                                   disabled,
+                                  readOnly,
                                   onAddLesson: (isoDate) => onAddLesson({ isoDate }),
                                   onEditLesson: (schedule) => onEditLesson({ schedule }),
                                   onDeleteLesson: (schedule) => onDeleteLesson({ schedule }),

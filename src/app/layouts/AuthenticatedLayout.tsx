@@ -187,8 +187,10 @@ export const AuthenticatedLayout = (props: AuthenticatedLayoutProps) => {
         component="header"
         sx={{
           width: '100%',
-          backgroundColor: '#ffffff',
-          boxShadow: '0 4px 12px rgba(0,0,0,0.08)',
+          backgroundColor: 'background.paper',
+          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.45)',
+          borderBottom: 1,
+          borderColor: 'divider',
           borderBottomLeftRadius: '16px',
           borderBottomRightRadius: '16px',
           mb: 0,

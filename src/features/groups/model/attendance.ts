@@ -1,4 +1,10 @@
-import type { AttendanceRecord, AttendanceStatus, Group, GroupSchedule, GroupStudent } from './types'
+import type {
+  AttendanceRecord,
+  AttendanceStatus,
+  Group,
+  GroupSchedule,
+  GroupStudent,
+} from './types'
 
 export type AuthenticatedFetch = (url: string, options?: RequestInit) => Promise<Response>
 
@@ -115,6 +121,25 @@ export const deleteAttendanceRecords = async (params: {
       method: 'DELETE',
     })
   }
+}
+
+export const buildAttendanceMapFromRecords = (params: {
+  group: Group
+  records: AttendanceRecord[]
+}): Map<string, AttendanceStatus> => {
+  const { group, records } = params
+  const students = group.students ?? []
+  const schedules = group.schedules ?? []
+  const map = new Map<string, AttendanceStatus>()
+
+  for (const record of records) {
+    const student = students.find((s) => s.id === record.studentId)
+    const schedule = schedules.find((s) => s.id === record.scheduleId)
+    if (!student || !schedule) continue
+    map.set(makeAttendanceKeyFromEntities(student, schedule), record.status)
+  }
+
+  return map
 }
 
 export const loadAttendanceMapForGroup = async (params: {

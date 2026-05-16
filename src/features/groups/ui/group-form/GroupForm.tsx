@@ -18,11 +18,13 @@ import {
   Typography,
 } from '@mui/material'
 import dayjs from 'dayjs'
+import { loadingOverlaySx, paperCardSx } from '../../../../app/theme'
 import { BelarusianText } from '../../../../components/BelarusianText'
 import { ConfirmDialog } from '../../../../components/ConfirmDialog'
 import { DialogTitleWithClose } from '../../../../shared/ui/dialog-title-with-close'
 import type { Teacher } from '../../../../entities/teacher/model/types'
 import {
+  buildAttendanceMapFromRecords,
   deleteAttendanceRecords,
   loadAttendanceMapForGroup,
   saveAttendanceRecords,
@@ -42,9 +44,11 @@ import { GROUP_LEVELS, GROUP_SUBJECTS } from '../../model/constants'
 import {
   createGroup,
   fetchGroupById,
+  fetchPublicGroup,
   fetchTeachers,
   updateGroup,
 } from '../../api/groupsApi'
+import { buildPublicGroupViewUrl } from '../../../../shared/lib/routing/publicGroupUrl'
 import { StudentsInlineList } from './students-inline-list'
 import { ScheduleCalendar } from './schedule-calendar'
 import {
@@ -75,7 +79,9 @@ export interface GroupFormProps {
   title: ReactNode
   mode: GroupFormMode
   groupId?: number
-  authenticatedFetch: AuthenticatedFetch
+  authenticatedFetch?: AuthenticatedFetch
+  /** Только просмотр (публичная ссылка) */
+  readOnly?: boolean
   /** Роль «учитель»: в селекторе выкладчыка показывать только текущего пользователя */
   isTeacher?: boolean
   /** Логин текущего пользователя (для учителя — совпадает с teacher.username) */
@@ -95,12 +101,24 @@ const getInitialSnackbarState = (): {
 })
 
 export const GroupForm = (props: GroupFormProps) => {
-  const { title, mode, groupId, authenticatedFetch, isTeacher, currentUsername, onDone, onCancel } =
-    props
+  const {
+    title,
+    mode,
+    groupId,
+    authenticatedFetch,
+    readOnly = false,
+    isTeacher,
+    currentUsername,
+    onDone,
+    onCancel,
+  } = props
+
+  const isInteractive = !readOnly
 
   const [teachers, setTeachers] = useState<Teacher[]>([])
   const [loading, setLoading] = useState(false)
   const [loadError, setLoadError] = useState<string>('')
+  const fieldsDisabled = loading || readOnly
 
   const [editingGroup, setEditingGroup] = useState<Group | null>(null)
 
@@ -185,6 +203,33 @@ export const GroupForm = (props: GroupFormProps) => {
     try {
       setLoadError('')
       setLoading(true)
+
+      if (readOnly) {
+        if (typeof groupId !== 'number') {
+          setLoadError('Не передан id группы')
+          return
+        }
+
+        const payload = await fetchPublicGroup(groupId)
+        if (!payload) {
+          setLoadError('Группа не найдена')
+          return
+        }
+
+        fillFormFromGroup(payload.group)
+        setAttendanceMap(
+          buildAttendanceMapFromRecords({
+            group: payload.group,
+            records: payload.attendance,
+          })
+        )
+        return
+      }
+
+      if (!authenticatedFetch) {
+        setLoadError('Нет доступа к API')
+        return
+      }
 
       const nextTeachers = await fetchTeachers({ authenticatedFetch })
       setTeachers(nextTeachers)
@@ -564,7 +609,7 @@ export const GroupForm = (props: GroupFormProps) => {
   }
 
   const handleSubmit = async () => {
-    if (!isFormValid()) return
+    if (!isFormValid() || !authenticatedFetch) return
     try {
       setLoading(true)
 
@@ -667,6 +712,24 @@ export const GroupForm = (props: GroupFormProps) => {
     onCancel()
   }
 
+  const handleCopyPublicLink = async () => {
+    if (typeof groupId !== 'number') return
+    const url = buildPublicGroupViewUrl(groupId)
+    try {
+      await navigator.clipboard.writeText(url)
+      showSnackbar('Публічная спасылка скапіявана', 'success')
+    } catch {
+      showSnackbar('Не ўдалося скапіяваць спасылку', 'error')
+    }
+  }
+
+  const teacherDisplayName = useMemo((): string => {
+    if (editingGroup?.teacherFullName?.trim()) return editingGroup.teacherFullName.trim()
+    const teacher = teachers.find((t) => t.id === selectedTeacherId)
+    if (teacher) return `${teacher.username} ${teacher.fullName}`.trim()
+    return ''
+  }, [editingGroup?.teacherFullName, selectedTeacherId, teachers])
+
   return (
     <Box
       sx={{
@@ -679,18 +742,7 @@ export const GroupForm = (props: GroupFormProps) => {
     >
       {loading && (
         <Box
-          sx={{
-            position: 'fixed',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            backgroundColor: 'rgba(255, 255, 255, 0.7)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 1300,
-          }}
+          sx={loadingOverlaySx}
           aria-busy="true"
           aria-live="polite"
           role="status"
@@ -709,15 +761,7 @@ export const GroupForm = (props: GroupFormProps) => {
         }}
       >
         {/* Блок: редактировать группу + инпуты до подзаголовка Студенты */}
-        <Paper
-          elevation={0}
-          sx={{
-            backgroundColor: '#ffffff',
-            borderRadius: '8px',
-            boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-            p: 2,
-          }}
-        >
+        <Paper elevation={0} sx={{ ...paperCardSx, p: 2 }}>
           <Typography variant="h5" component="h2" sx={{ mb: 2 }}>
             {title}
           </Typography>
@@ -736,39 +780,50 @@ export const GroupForm = (props: GroupFormProps) => {
                 onChange={(e) => setGroupName(e.target.value)}
                 fullWidth
                 required
-                disabled={loading}
+                disabled={fieldsDisabled}
               />
             </Tooltip>
 
-            <Tooltip title="Преподаватель" arrow placement="top-start">
-              <FormControl fullWidth disabled={loading}>
-                <InputLabel id="teacher-select-label">Выкладчык</InputLabel>
-                <Select
-                  labelId="teacher-select-label"
-                  value={selectedTeacherId === '' ? '' : String(selectedTeacherId)}
+            {readOnly ? (
+              <Tooltip title="Преподаватель" arrow placement="top-start">
+                <TextField
                   label="Выкладчык"
-                  onChange={(e) =>
-                    setSelectedTeacherId(
-                      e.target.value === '' ? '' : Number(e.target.value)
-                    )
-                  }
-                >
-                  {!isTeacher && (
-                    <MenuItem value="">
-                      <em>Не паказана</em>
-                    </MenuItem>
-                  )}
-                  {teachersForSelect.map((teacher) => (
-                    <MenuItem key={teacher.id} value={String(teacher.id)}>
-                      {teacher.username} {teacher.fullName}
-                    </MenuItem>
-                  ))}
-                </Select>
-              </FormControl>
-            </Tooltip>
+                  value={teacherDisplayName || '—'}
+                  fullWidth
+                  disabled
+                />
+              </Tooltip>
+            ) : (
+              <Tooltip title="Преподаватель" arrow placement="top-start">
+                <FormControl fullWidth disabled={fieldsDisabled}>
+                  <InputLabel id="teacher-select-label">Выкладчык</InputLabel>
+                  <Select
+                    labelId="teacher-select-label"
+                    value={selectedTeacherId === '' ? '' : String(selectedTeacherId)}
+                    label="Выкладчык"
+                    onChange={(e) =>
+                      setSelectedTeacherId(
+                        e.target.value === '' ? '' : Number(e.target.value)
+                      )
+                    }
+                  >
+                    {!isTeacher && (
+                      <MenuItem value="">
+                        <em>Не паказана</em>
+                      </MenuItem>
+                    )}
+                    {teachersForSelect.map((teacher) => (
+                      <MenuItem key={teacher.id} value={String(teacher.id)}>
+                        {teacher.username} {teacher.fullName}
+                      </MenuItem>
+                    ))}
+                  </Select>
+                </FormControl>
+              </Tooltip>
+            )}
 
             <Tooltip title="Предмет" arrow placement="top-start">
-              <FormControl fullWidth required disabled={loading}>
+              <FormControl fullWidth required disabled={fieldsDisabled}>
                 <InputLabel id="subject-select-label">Прадмет</InputLabel>
                 <Select
                   labelId="subject-select-label"
@@ -793,13 +848,13 @@ export const GroupForm = (props: GroupFormProps) => {
                   onChange={(e) => setCustomSubject(e.target.value)}
                   fullWidth
                   required
-                  disabled={loading}
+                  disabled={fieldsDisabled}
                 />
               </Tooltip>
             )}
 
             <Tooltip title="Уровень" arrow placement="top-start">
-              <FormControl fullWidth required disabled={loading}>
+              <FormControl fullWidth required disabled={fieldsDisabled}>
                 <InputLabel id="level-select-label">Узровень</InputLabel>
                 <Select
                   labelId="level-select-label"
@@ -819,18 +874,11 @@ export const GroupForm = (props: GroupFormProps) => {
         </Paper>
 
         {/* Блок: Студенты */}
-        <Paper
-          elevation={0}
-          sx={{
-            backgroundColor: '#ffffff',
-            borderRadius: '8px',
-            boxShadow: '0 2px 12px rgba(0,0,0,0.06)',
-            p: 2,
-          }}
-        >
+        <Paper elevation={0} sx={{ ...paperCardSx, p: 2 }}>
           <StudentsInlineList
             students={students}
-            disabled={loading}
+            disabled={fieldsDisabled}
+            readOnly={readOnly}
             onAddStudent={handleAddStudent}
             onEditStudent={handleEditStudent}
             onDeleteStudent={handleDeleteStudentClick}
@@ -840,7 +888,8 @@ export const GroupForm = (props: GroupFormProps) => {
         {/* Графік: заголовок отдельным блоком, годы в контейнере — внутри ScheduleCalendar */}
         <ScheduleCalendar
             schedules={schedules}
-            disabled={loading}
+            disabled={fieldsDisabled}
+            readOnly={readOnly}
             onAddLesson={handleOpenAddLessonDialog}
             onEditLesson={handleOpenEditLessonDialog}
             onDeleteLesson={handleDeleteScheduleFromEntity}
@@ -848,80 +897,75 @@ export const GroupForm = (props: GroupFormProps) => {
           />
       </Box>
 
-      <Box
-        component="footer"
-        sx={{
-          position: 'sticky',
-          bottom: 0,
-          left: 0,
-          right: 0,
-          width: '100vw',
-          marginLeft: 'calc(-50vw + 50%)',
-          marginRight: 'calc(-50vw + 50%)',
-          backgroundColor: 'background.paper',
-          borderTop: 1,
-          borderColor: 'divider',
-          zIndex: 10,
-        }}
-      >
+      {isInteractive && (
         <Box
+          component="footer"
           sx={{
-            maxWidth: 1300,
-            width: '100%',
-            boxSizing: 'border-box',
-            margin: 'auto',
-            px: { xs: 5, sm: 6 },
-            py: 2,
-            display: 'flex',
-            gap: 1,
-            justifyContent: 'flex-end',
-            alignItems: 'center',
+            position: 'sticky',
+            bottom: 0,
+            left: 0,
+            right: 0,
+            width: '100vw',
+            marginLeft: 'calc(-50vw + 50%)',
+            marginRight: 'calc(-50vw + 50%)',
+            backgroundColor: 'background.paper',
+            borderTop: 1,
+            borderColor: 'divider',
+            zIndex: 10,
           }}
         >
-        <Button
-          variant="outlined"
-          onClick={handleCancel}
-          disabled={loading}
-          aria-label="Назад"
-          sx={{
-            color: '#388e3c',
-            borderColor: '#388e3c',
-            '&:hover': {
-              borderColor: '#2e7d32',
-              color: '#2e7d32',
-              backgroundColor: '#28a745',
-            },
-            '&:disabled': {
-              borderColor: 'action.disabled',
-              color: 'action.disabled',
-            },
-          }}
-        >
-          <BelarusianText belarusian="Назад" russian="Назад" />
-        </Button>
-        <Button
-          variant="contained"
-          onClick={handleSubmit}
-          disabled={!isFormValid() || loading || Boolean(loadError)}
-          aria-label="Захаваць"
-          sx={{
-            backgroundColor: '#388e3c',
-            color: '#fff',
-            '&:hover': {
-              backgroundColor: '#2e7d32',
-              color: '#fff',
-            },
-            '&:disabled': {
-              backgroundColor: 'action.disabledBackground',
-              color: 'action.disabled',
-            },
-          }}
-        >
-          <BelarusianText belarusian="Захаваць" russian="Сохранить" />
-        </Button>
+          <Box
+            sx={{
+              maxWidth: 1300,
+              width: '100%',
+              boxSizing: 'border-box',
+              margin: 'auto',
+              px: { xs: 5, sm: 6 },
+              py: 2,
+              display: 'flex',
+              gap: 1,
+              justifyContent: 'flex-end',
+              alignItems: 'center',
+              flexWrap: 'wrap',
+            }}
+          >
+            {mode === 'edit' && typeof groupId === 'number' && (
+              <Button
+                variant="outlined"
+                color="primary"
+                onClick={handleCopyPublicLink}
+                disabled={loading}
+                aria-label="Скапіяваць публічную спасылку"
+              >
+                <BelarusianText
+                  belarusian="Скапіяваць публічную спасылку"
+                  russian="Копировать публичную ссылку"
+                />
+              </Button>
+            )}
+            <Button
+              variant="outlined"
+              color="primary"
+              onClick={handleCancel}
+              disabled={loading}
+              aria-label="Назад"
+            >
+              <BelarusianText belarusian="Назад" russian="Назад" />
+            </Button>
+            <Button
+              variant="contained"
+              color="primary"
+              onClick={handleSubmit}
+              disabled={!isFormValid() || loading || Boolean(loadError)}
+              aria-label="Захаваць"
+            >
+              <BelarusianText belarusian="Захаваць" russian="Сохранить" />
+            </Button>
+          </Box>
         </Box>
-      </Box>
+      )}
 
+        {isInteractive && (
         <LessonDialog
           open={openLessonDialog}
           disabled={loading}
@@ -931,7 +975,10 @@ export const GroupForm = (props: GroupFormProps) => {
           onClose={() => setOpenLessonDialog(false)}
           onSave={handleSaveLesson}
         />
+        )}
 
+        {isInteractive && (
+        <>
         {/* Диалог добавления/редактирования студента */}
         <Dialog
           open={openStudentDialog}
@@ -1071,6 +1118,8 @@ export const GroupForm = (props: GroupFormProps) => {
           cancelText={<BelarusianText belarusian="Адмена" russian="Отмена" />}
           confirmColor="error"
         />
+        </>
+        )}
 
         <Snackbar
           open={snackbar.open}

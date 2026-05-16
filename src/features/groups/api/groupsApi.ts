@@ -1,6 +1,12 @@
 import type { Teacher } from '../../../entities/teacher/model/types'
+import { publicFetch } from '../../../shared/lib/api/publicFetch'
 import type { AuthenticatedFetch } from '../model/attendance'
-import type { Group } from '../model/types'
+import type { AttendanceRecord, Group } from '../model/types'
+
+export interface PublicGroupPayload {
+  group: Group
+  attendance: AttendanceRecord[]
+}
 
 export const fetchTeachers = async (params: {
   authenticatedFetch: AuthenticatedFetch
@@ -28,6 +34,12 @@ export const fetchGroupById = async (params: {
   const groups = await fetchGroups({ authenticatedFetch })
   const found = groups.find((g) => g.id === groupId)
   return found ?? null
+}
+
+export const fetchPublicGroup = async (groupId: number): Promise<PublicGroupPayload | null> => {
+  const response = await publicFetch(`/api/public-group?id=${groupId}`)
+  if (!response.ok) return null
+  return (await response.json()) as PublicGroupPayload
 }
 
 export const createGroup = async (params: {

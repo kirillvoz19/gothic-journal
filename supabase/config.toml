@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.teacher-password]
 verify_jwt = false
+
+[functions.public-group]
+verify_jwt = false

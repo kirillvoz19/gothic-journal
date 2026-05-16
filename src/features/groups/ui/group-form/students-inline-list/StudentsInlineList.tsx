@@ -8,13 +8,15 @@ import type { GroupStudent } from '../../../model/types'
 export type StudentsInlineListProps = {
   students: GroupStudent[]
   disabled?: boolean
+  readOnly?: boolean
   onAddStudent: () => void
   onEditStudent: (index: number) => void
   onDeleteStudent: (index: number) => void
 }
 
 export const StudentsInlineList = (props: StudentsInlineListProps) => {
-  const { students, disabled = false, onAddStudent, onEditStudent, onDeleteStudent } = props
+  const { students, disabled = false, readOnly = false, onAddStudent, onEditStudent, onDeleteStudent } =
+    props
 
   return (
     <Box>
@@ -22,17 +24,19 @@ export const StudentsInlineList = (props: StudentsInlineListProps) => {
         <Typography variant="subtitle1" sx={{ fontFamily: '"Oswald", sans-serif', fontSize: '1.25rem' }}>
           <BelarusianText belarusian="Студэнты" russian="Студенты" />
         </Typography>
-        <Tooltip title="Дадаць студэнта">
-          <IconButton
-            aria-label="Дадаць студэнта"
-            size="small"
-            color="primary"
-            onClick={onAddStudent}
-            disabled={disabled}
-          >
-            <AddIcon />
-          </IconButton>
-        </Tooltip>
+        {!readOnly && (
+          <Tooltip title="Дадаць студэнта">
+            <IconButton
+              aria-label="Дадаць студэнта"
+              size="small"
+              color="primary"
+              onClick={onAddStudent}
+              disabled={disabled}
+            >
+              <AddIcon />
+            </IconButton>
+          </Tooltip>
+        )}
       </Box>
 
       {students.length === 0 ? (
@@ -71,26 +75,28 @@ export const StudentsInlineList = (props: StudentsInlineListProps) => {
                 {student.fullName}
               </Typography>
 
-              <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
-                <IconButton
-                  aria-label="Рэдагаваць студэнта"
-                  size="small"
-                  onClick={() => onEditStudent(index)}
-                  color="primary"
-                  disabled={disabled}
-                >
-                  <EditIcon fontSize="small" />
-                </IconButton>
-                <IconButton
-                  aria-label="Выдаліць студэнта"
-                  size="small"
-                  onClick={() => onDeleteStudent(index)}
-                  color="error"
-                  disabled={disabled}
-                >
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
-              </Box>
+              {!readOnly && (
+                <Box sx={{ display: 'flex', gap: 0.5, flexShrink: 0 }}>
+                  <IconButton
+                    aria-label="Рэдагаваць студэнта"
+                    size="small"
+                    onClick={() => onEditStudent(index)}
+                    color="primary"
+                    disabled={disabled}
+                  >
+                    <EditIcon fontSize="small" />
+                  </IconButton>
+                  <IconButton
+                    aria-label="Выдаліць студэнта"
+                    size="small"
+                    onClick={() => onDeleteStudent(index)}
+                    color="error"
+                    disabled={disabled}
+                  >
+                    <DeleteIcon fontSize="small" />
+                  </IconButton>
+                </Box>
+              )}
             </Box>
           ))}
         </Box>

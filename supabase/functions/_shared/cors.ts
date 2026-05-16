@@ -1,7 +1,8 @@
 const DEFAULT_HEADERS = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, OPTIONS',
-  'Access-Control-Allow-Headers': 'Content-Type, Authorization, X-Access-Token',
+  'Access-Control-Allow-Headers':
+    'Content-Type, Authorization, apikey, X-Access-Token, x-client-info',
   'Content-Type': 'application/json',
 }
 
