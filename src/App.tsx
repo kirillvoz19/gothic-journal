@@ -405,7 +405,7 @@ function App() {
               }}
             >
               <Typography variant="h4" component="h1" align="center" gutterBottom>
-                <BelarusianText belarusian="Уваход" russian="Вход" />
+                <BelarusianText belarusian="Уваход123" russian="Вход" />
               </Typography>
 
               {loginError && (
