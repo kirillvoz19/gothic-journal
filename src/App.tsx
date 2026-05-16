@@ -195,7 +195,7 @@ function App() {
       return refreshInFlightRef.current
     }
 
-    const storedRefreshToken = localStorage.getItem('refreshToken')
+    const storedRefreshToken = readRefreshTokenFromStorage()
     if (!storedRefreshToken) {
       handleLogout()
       return false

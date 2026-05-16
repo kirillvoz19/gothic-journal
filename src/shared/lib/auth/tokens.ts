@@ -1,10 +1,12 @@
+import { getStorageKey } from '../storage/namespace'
+
 export type AuthTokens = {
   accessToken: string
   refreshToken: string
 }
 
-const ACCESS_TOKEN_KEY = 'accessToken'
-const REFRESH_TOKEN_KEY = 'refreshToken'
+const ACCESS_TOKEN_KEY = getStorageKey('accessToken')
+const REFRESH_TOKEN_KEY = getStorageKey('refreshToken')
 
 export const readAccessTokenFromStorage = (): string | null =>
   localStorage.getItem(ACCESS_TOKEN_KEY)

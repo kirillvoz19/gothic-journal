@@ -1,8 +1,10 @@
+import { getStorageKey } from './namespace'
+
 export type TeacherId = number
 
 export type TeacherPasswordsByTeacherId = Record<string, string>
 
-const STORAGE_KEY = 'teacherPasswordsByTeacherId:v1'
+const STORAGE_KEY = getStorageKey('teacherPasswordsByTeacherId:v1')
 
 const isRecord = (value: unknown): value is Record<string, unknown> => {
   if (typeof value !== 'object' || value === null) return false

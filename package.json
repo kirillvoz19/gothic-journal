@@ -9,7 +9,8 @@
     "dev:full": "npm run build && npx wrangler pages dev dist",
     "build": "tsc && vite build",
     "preview": "vite preview",
-    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0"
+    "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "hash-password": "node scripts/hash-password.mjs"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
