@@ -1,6 +1,11 @@
 import dayjs from 'dayjs'
+import customParseFormat from 'dayjs/plugin/customParseFormat'
 import type { GroupSchedule } from '../../../model/types'
 import type { MonthIndex0, SchedulesByYearMonth, YearNumber } from './types'
+
+dayjs.extend(customParseFormat)
+
+const LESSON_TIME_FORMATS = ['HH:mm', 'HH:mm:ss']
 
 export const groupSchedulesByYearMonth = (schedules: GroupSchedule[]): SchedulesByYearMonth => {
   const map: SchedulesByYearMonth = new Map()
@@ -55,8 +60,8 @@ export const getScheduleForDate = (params: {
 
 export const getLessonMinutes = (params: { startTime: string; endTime: string }): number => {
   const { startTime, endTime } = params
-  const start = dayjs(startTime, 'HH:mm')
-  const end = dayjs(endTime, 'HH:mm')
+  const start = dayjs(startTime, LESSON_TIME_FORMATS)
+  const end = dayjs(endTime, LESSON_TIME_FORMATS)
   if (!start.isValid() || !end.isValid()) return 0
   const diff = end.diff(start, 'minute')
   return diff > 0 ? diff : 0
