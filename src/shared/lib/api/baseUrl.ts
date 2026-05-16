@@ -31,11 +31,14 @@ export function getApiUrl(path: string): string {
   return path
 }
 
-/** Заголовки для запросов к Supabase Edge Functions: шлюз требует Authorization: Bearer anon_key. */
+/**
+ * Заголовки для Supabase Edge Functions (verify_jwt = false в supabase/config.toml).
+ * API-ключ — в apikey (publishable или legacy anon). JWT пользователя — в X-Access-Token.
+ */
 export function getSupabaseRequestHeaders(accessToken?: string): Record<string, string> {
   const anon = import.meta.env.VITE_SUPABASE_ANON_KEY
   if (!anon || anon === 'placeholder') return {}
-  const headers: Record<string, string> = { Authorization: `Bearer ${anon}` }
+  const headers: Record<string, string> = { apikey: anon }
   if (accessToken) headers['X-Access-Token'] = accessToken
   return headers
 }

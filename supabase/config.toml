@@ -1,0 +1,22 @@
+# Кастомная авторизация (JWT приложения в X-Access-Token), не Supabase Auth.
+# Шлюз не должен проверять Authorization как user JWT — ключ передаётся в apikey.
+[functions.login]
+verify_jwt = false
+
+[functions.refresh]
+verify_jwt = false
+
+[functions.teachers]
+verify_jwt = false
+
+[functions.groups]
+verify_jwt = false
+
+[functions.attendance]
+verify_jwt = false
+
+[functions.backup]
+verify_jwt = false
+
+[functions.teacher-password]
+verify_jwt = false
